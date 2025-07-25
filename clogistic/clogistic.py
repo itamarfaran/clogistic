@@ -32,49 +32,68 @@ from sklearn.utils.validation import check_X_y
 from sklearn.utils.validation import _check_sample_weight
 
 
-def _check_parameters(penalty, tol, C, fit_intercept, class_weight, solver,
-                      max_iter, l1_ratio, warm_start, verbose):
+def _check_parameters(
+    penalty,
+    tol,
+    C,
+    fit_intercept,
+    class_weight,
+    solver,
+    max_iter,
+    l1_ratio,
+    warm_start,
+    verbose,
+):
 
     if penalty not in ("l1", "l2", "elasticnet", "none"):
-        raise ValueError('Invalid value for penalty. Supported penalties are '
-                         '"l1", "l2", "elasticnet" and "none".')
+        raise ValueError(
+            "Invalid value for penalty. Supported penalties are "
+            '"l1", "l2", "elasticnet" and "none".'
+        )
 
     if penalty == "elasticnet":
-        if (not isinstance(l1_ratio, numbers.Number) or
-                not 0 <= l1_ratio <= 1):
-            raise ValueError("l1_ratio must be between 0 and 1; got {}."
-                             .format(l1_ratio))
+        if not isinstance(l1_ratio, numbers.Number) or not 0 <= l1_ratio <= 1:
+            raise ValueError(
+                "l1_ratio must be between 0 and 1; got {}.".format(l1_ratio)
+            )
     elif l1_ratio is not None:
-        warnings.warn("l1_ratio parameter is only used when penalty is "
-                      "'elasticnet'; got penalty={}.".format(penalty))
+        warnings.warn(
+            "l1_ratio parameter is only used when penalty is "
+            "'elasticnet'; got penalty={}.".format(penalty)
+        )
 
     if not isinstance(tol, numbers.Number) or tol < 0:
-        raise ValueError("tol parameter for stopping criteria must be "
-                         "positive; got {}.".format(tol))
+        raise ValueError(
+            "tol parameter for stopping criteria must be "
+            "positive; got {}.".format(tol)
+        )
 
     if not isinstance(fit_intercept, bool):
-        raise TypeError("fit_intercept must be a bool; got {}."
-                        .format(fit_intercept))
+        raise TypeError("fit_intercept must be a bool; got {}.".format(fit_intercept))
 
     if class_weight is not None:
         if not isinstance(class_weight, (dict, str)):
-            raise TypeError('class_weight must be dict, "balanced" or None; '
-                            'got {}.'.format(class_weight))
+            raise TypeError(
+                'class_weight must be dict, "balanced" or None; '
+                "got {}.".format(class_weight)
+            )
 
         elif isinstance(class_weight, str) and class_weight != "balanced":
-            raise ValueError('Invalid value for class_weight. Allowed string '
-                             'value is "balanced".')
+            raise ValueError(
+                "Invalid value for class_weight. Allowed string " 'value is "balanced".'
+            )
 
     if solver not in ("ecos", "L-BFGS-B", "scs"):
-        raise ValueError('Invalid value for solver. Allowed string '
-                         'values are "ecos", "L-BFGS-B" and "scs".')
+        raise ValueError(
+            "Invalid value for solver. Allowed string "
+            'values are "ecos", "L-BFGS-B" and "scs".'
+        )
 
     if not isinstance(max_iter, numbers.Number) or max_iter < 0:
         raise ValueError("max_iter must be positive; got {}.".format(max_iter))
 
     if not isinstance(warm_start, bool):
-        raise TypeError("warm_start must be a bool; got {}."
-                        .format(warm_start))
+        raise TypeError("warm_start must be a bool; got {}.".format(warm_start))
 
     if not isinstance(verbose, bool):
         raise TypeError("verbose must be a bool; got {}.".format(verbose))
@@ -83,18 +102,23 @@ def _check_parameters(penalty, tol, C, fit_intercept, class_weight, solver,
 def _check_solver(solver, penalty, bounds, constraints, warm_start):
     if solver == "L-BFGS-B":
         if penalty in ("l1", "elasticnet") and bounds is not None:
-            raise ValueError('Solver "L-BFGS-B" does not support bound '
-                             'constraints with penalty "l1" and '
-                             '"elasticnet"; choose either "ecos" or "scs" '
-                             'solver.')
+            raise ValueError(
+                'Solver "L-BFGS-B" does not support bound '
+                'constraints with penalty "l1" and '
+                '"elasticnet"; choose either "ecos" or "scs" '
+                "solver."
+            )
 
         if constraints is not None:
-            raise ValueError('"L-BFGS-B" solver does not  supports linear '
-                             'constraints.')
+            raise ValueError(
+                '"L-BFGS-B" solver does not  supports linear ' "constraints."
+            )
 
         if penalty in ("l1", "elasticnet") and warm_start:
-            raise ValueError('Solver "L-BFGS-B" does not support warm start '
-                             'with "l1" and "elasticnet" regularization.')
+            raise ValueError(
+                'Solver "L-BFGS-B" does not support warm start '
+                'with "l1" and "elasticnet" regularization.'
+            )
 
 
 def _check_X_y(X, y):
@@ -103,11 +127,13 @@ def _check_X_y(X, y):
 
     classes = np.unique(y)
     if len(classes) < 2:
-        raise ValueError("This solver needs samples of 2 classes"
-                         " in the data, but the data contains only one"
-                         " class: {}.".format(classes[0]))
+        raise ValueError(
+            "This solver needs samples of 2 classes"
+            " in the data, but the data contains only one"
+            " class: {}.".format(classes[0])
+        )
 
-    X, y = check_X_y(X, y, accept_sparse='csr', order="C")
+    X, y = check_X_y(X, y, accept_sparse="csr", order="C")
     return X, y, classes
 
 
@@ -120,14 +146,17 @@ def _check_bounds(bounds, n, fit_intercept):
     check_consistent_length(lb, ub)
 
     if n + int(fit_intercept) != len(lb):
-        raise ValueError("Length of lower bounds is incorrect; got {} and "
-                         "must be {}.".format(len(lb), n + int(fit_intercept)))
+        raise ValueError(
+            "Length of lower bounds is incorrect; got {} and "
+            "must be {}.".format(len(lb), n + int(fit_intercept))
+        )
 
 
 def _check_constraints(constraints, n, fit_intercept):
     if not isinstance(constraints, LinearConstraint):
-        raise TypeError("constraints is not of type "
-                        "scipy.optimize.LinearConstraint.")
+        raise TypeError(
+            "constraints is not of type " "scipy.optimize.LinearConstraint."
+        )
 
     A = constraints.A
     lb = constraints.lb
@@ -135,22 +164,24 @@ def _check_constraints(constraints, n, fit_intercept):
     check_consistent_length(lb, ub)
 
     if n + int(fit_intercept) != A.shape[1]:
-        raise ValueError("Number of columns of matrix A is incorrect; got {} "
-                         "and must be {}.".format(A.shape[1],
-                                                  n + int(fit_intercept)))
+        raise ValueError(
+            "Number of columns of matrix A is incorrect; got {} "
+            "and must be {}.".format(A.shape[1], n + int(fit_intercept))
+        )
 
     check_consistent_length(A, lb)
 
 
-def _logistic_l1_loss_and_grad(w2, X, y, alpha, penalty, fit_intercept,
-                               l1_ratio, sample_weight):
+def _logistic_l1_loss_and_grad(
+    w2, X, y, alpha, penalty, fit_intercept, l1_ratio, sample_weight
+):
 
     n_samples, n_features = X.shape
 
     grad = np.empty_like(w2)
     reg_grad = np.zeros(w2.size)
 
-    c = 0.
+    c = 0.0
     if fit_intercept:
         c = w2[-1]
         w = w2[:n_features] - w2[n_features:-1]
@@ -171,7 +202,7 @@ def _logistic_l1_loss_and_grad(w2, X, y, alpha, penalty, fit_intercept,
         reg = regl2 + regl1
         rg1 = alpha * l1_ratio
         rg2 = alpha * (1 - l1_ratio) * w
-        reg_grad[:2*n_features] = np.concatenate([rg2, -rg2]) + rg1
+        reg_grad[: 2 * n_features] = np.concatenate([rg2, -rg2]) + rg1
 
     out = -np.sum(sample_weight * log_logistic(yz)) + reg
 
@@ -193,13 +224,12 @@ def _logistic_l1_loss_and_grad(w2, X, y, alpha, penalty, fit_intercept,
     return out, grad
 
 
-def _logistic_loss_and_grad(w, X, y, alpha, penalty, fit_intercept,
-                            sample_weight):
+def _logistic_loss_and_grad(w, X, y, alpha, penalty, fit_intercept, sample_weight):
 
     n_samples, n_features = X.shape
     grad = np.empty_like(w)
 
-    c = 0.
+    c = 0.0
     if fit_intercept:
         c = w[-1]
         w = w[:-1]
@@ -208,7 +238,7 @@ def _logistic_loss_and_grad(w, X, y, alpha, penalty, fit_intercept,
     yz = y * z
 
     if penalty == "l2":
-        reg = .5 * alpha * np.dot(w, w)
+        reg = 0.5 * alpha * np.dot(w, w)
         reg_grad = alpha * w
     else:
         reg = 0
@@ -226,25 +256,36 @@ def _logistic_loss_and_grad(w, X, y, alpha, penalty, fit_intercept,
     return out, grad
 
 
-def _fit_lbfgsb(penalty, tol, C, fit_intercept, max_iter, l1_ratio,
-                warm_start_coef, verbose, X, y, sample_weight, bounds=None):
+def _fit_lbfgsb(
+    penalty,
+    tol,
+    C,
+    fit_intercept,
+    max_iter,
+    l1_ratio,
+    warm_start_coef,
+    verbose,
+    X,
+    y,
+    sample_weight,
+    bounds=None,
+):
 
     m, n = X.shape
 
-    mask = (y == 1)
+    mask = y == 1
     y_bin = np.ones(y.shape, dtype=X.dtype)
-    y_bin[~mask] = -1.
+    y_bin[~mask] = -1.0
 
     if penalty in ("l1", "elasticnet"):
         func = _logistic_l1_loss_and_grad
         w0 = np.zeros(2 * n + int(fit_intercept))
-        bounds = [(0, np.inf)] * n*2 + [(-np.inf, np.inf)] * int(fit_intercept)
-        args = (X, y_bin, 1. / C, penalty, fit_intercept, l1_ratio,
-                sample_weight)
+        bounds = [(0, np.inf)] * n * 2 + [(-np.inf, np.inf)] * int(fit_intercept)
+        args = (X, y_bin, 1.0 / C, penalty, fit_intercept, l1_ratio, sample_weight)
     else:
         func = _logistic_loss_and_grad
         w0 = np.zeros(n + int(fit_intercept))
-        args = (X, y_bin, 1. / C, penalty, fit_intercept, sample_weight)
+        args = (X, y_bin, 1.0 / C, penalty, fit_intercept, sample_weight)
 
     if warm_start_coef is not None:
         w0 = warm_start_coef
@@ -252,8 +293,8 @@ def _fit_lbfgsb(penalty, tol, C, fit_intercept, max_iter, l1_ratio,
     options = {"disp": verbose, "gtol": tol, "maxiter": max_iter}
 
     res = minimize(
-        func, w0, method="L-BFGS-B", jac=True,
-        bounds=bounds, args=args, options=options)
+        func, w0, method="L-BFGS-B", jac=True, bounds=bounds, args=args, options=options
+    )
 
     if fit_intercept:
         intercept_ = res.x[-1]
@@ -271,9 +312,22 @@ def _fit_lbfgsb(penalty, tol, C, fit_intercept, max_iter, l1_ratio,
     return coef_, intercept_
 
 
-def _fit_cvxpy(solver, penalty, tol, C, fit_intercept, max_iter, l1_ratio,
-               warm_start_coef, verbose, X, y, sample_weight, bounds=None,
-               constraints=None):
+def _fit_cvxpy(
+    solver,
+    penalty,
+    tol,
+    C,
+    fit_intercept,
+    max_iter,
+    l1_ratio,
+    warm_start_coef,
+    verbose,
+    X,
+    y,
+    sample_weight,
+    bounds=None,
+    constraints=None,
+):
 
     m, n = X.shape
 
@@ -288,8 +342,7 @@ def _fit_cvxpy(solver, penalty, tol, C, fit_intercept, max_iter, l1_ratio,
         Xbeta = X @ beta
 
     # Objective function
-    log_likelihood = C * sample_weight @ (
-        cp.multiply(y, Xbeta) - cp.logistic(Xbeta))
+    log_likelihood = C * sample_weight @ (cp.multiply(y, Xbeta) - cp.logistic(Xbeta))
 
     # Bounds
     cons = []
@@ -347,12 +400,13 @@ def _fit_cvxpy(solver, penalty, tol, C, fit_intercept, max_iter, l1_ratio,
     problem = cp.Problem(obj, cons)
 
     if solver == "ecos":
-        solve_options = {'solver': cp.ECOS, 'abstol': tol}
+        solve_options = {"solver": cp.ECOS, "abstol": tol}
     elif solver == "scs":
-        solve_options = {'solver': cp.SCS, 'eps': tol}
+        solve_options = {"solver": cp.SCS, "eps": tol}
 
-    problem.solve(max_iters=max_iter, verbose=verbose, warm_start=warm_start,
-                  **solve_options)
+    problem.solve(
+        max_iters=max_iter, verbose=verbose, warm_start=warm_start, **solve_options
+    )
 
     if fit_intercept:
         intercept_ = beta.value[-1]
@@ -364,8 +418,7 @@ def _fit_cvxpy(solver, penalty, tol, C, fit_intercept, max_iter, l1_ratio,
     return coef_, intercept_
 
 
-class LogisticRegression(BaseEstimator, LinearClassifierMixin,
-                         SparseCoefMixin):
+class LogisticRegression(BaseEstimator, LinearClassifierMixin, SparseCoefMixin):
     """
     Constrained Logistic Regression (aka logit, MaxEnt) classifier.
 
@@ -453,9 +506,20 @@ class LogisticRegression(BaseEstimator, LinearClassifierMixin,
         Ciyou Zhu, Richard Byrd, Jorge Nocedal and Jose Luis Morales.
         http://users.iems.northwestern.edu/~nocedal/L-BFGS-Bb.html
     """
-    def __init__(self, penalty="l2", tol=1e-4, C=1.0, fit_intercept=True,
-                 class_weight=None, solver="ecos", max_iter=100, l1_ratio=None,
-                 warm_start=False, verbose=False):
+
+    def __init__(
+        self,
+        penalty="l2",
+        tol=1e-4,
+        C=1.0,
+        fit_intercept=True,
+        class_weight=None,
+        solver="ecos",
+        max_iter=100,
+        l1_ratio=None,
+        warm_start=False,
+        verbose=False,
+    ):
 
         self.penalty = penalty
         self.tol = tol
@@ -498,8 +562,7 @@ class LogisticRegression(BaseEstimator, LinearClassifierMixin,
         """
         _check_parameters(**self.get_params())
 
-        _check_solver(self.solver, self.penalty, bounds, constraints,
-                      self.warm_start)
+        _check_solver(self.solver, self.penalty, bounds, constraints, self.warm_start)
 
         X, y, self.classes_ = _check_X_y(X, y)
 
@@ -517,29 +580,51 @@ class LogisticRegression(BaseEstimator, LinearClassifierMixin,
         if self.class_weight is not None:
             le = LabelEncoder()
             class_weight_ = compute_class_weight(
-                class_weight=self.class_weight, classes=self.classes_, y=y)
+                class_weight=self.class_weight, classes=self.classes_, y=y
+            )
             sample_weight *= class_weight_[le.fit_transform(y)]
 
         if self.warm_start:
-            warm_start_coef = getattr(self, 'coef_', None)
+            warm_start_coef = getattr(self, "coef_", None)
         else:
             warm_start_coef = None
         if warm_start_coef is not None and self.fit_intercept:
-            warm_start_coef = np.append(warm_start_coef,
-                                        self.intercept_[:, np.newaxis],
-                                        axis=1)
+            warm_start_coef = np.append(
+                warm_start_coef, self.intercept_[:, np.newaxis], axis=1
+            )
 
         if self.solver in ("ecos", "scs"):
             coef_, intercept_ = _fit_cvxpy(
-                self.solver, self.penalty, self.tol, self.C,
-                self.fit_intercept, self.max_iter, self.l1_ratio,
-                warm_start_coef, self.verbose, X, y, sample_weight, bounds,
-                constraints)
+                self.solver,
+                self.penalty,
+                self.tol,
+                self.C,
+                self.fit_intercept,
+                self.max_iter,
+                self.l1_ratio,
+                warm_start_coef,
+                self.verbose,
+                X,
+                y,
+                sample_weight,
+                bounds,
+                constraints,
+            )
         else:
             coef_, intercept_ = _fit_lbfgsb(
-                self.penalty, self.tol, self.C, self.fit_intercept,
-                self.max_iter, self.l1_ratio, warm_start_coef, self.verbose,
-                X, y, sample_weight, bounds)
+                self.penalty,
+                self.tol,
+                self.C,
+                self.fit_intercept,
+                self.max_iter,
+                self.l1_ratio,
+                warm_start_coef,
+                self.verbose,
+                X,
+                y,
+                sample_weight,
+                bounds,
+            )
 
         self.coef_ = np.asarray([coef_])
         self.intercept_ = np.asarray([intercept_])
