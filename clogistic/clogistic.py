@@ -20,7 +20,7 @@ from scipy.special import expit
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_consistent_length, compute_class_weight
-from sklearn.utils.extmath import log_logistic, safe_sparse_dot
+from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import _check_sample_weight, check_is_fitted
 from sklearn.utils._param_validation import StrOptions, Interval
@@ -126,7 +126,7 @@ def _logistic_l1_loss_and_grad(
         rg2 = alpha * (1 - l1_ratio) * w
         reg_grad[: 2 * n_features] = np.concatenate([rg2, -rg2]) + rg1
 
-    out = -np.sum(sample_weight * log_logistic(yz)) + reg
+    out = np.sum(sample_weight * np.logaddexp(0, -yz)) + reg
 
     z = expit(yz)
     z0 = sample_weight * (z - 1) * y
@@ -166,7 +166,7 @@ def _logistic_loss_and_grad(w, X, y, alpha, penalty, fit_intercept, sample_weigh
         reg = 0
         reg_grad = 0
 
-    out = -np.sum(sample_weight * log_logistic(yz)) + reg
+    out = np.sum(sample_weight * np.logaddexp(0, -yz)) + reg
 
     z = expit(yz)
     z0 = sample_weight * (z - 1) * y
@@ -327,7 +327,7 @@ def _fit_cvxpy(
         solve_options = {"solver": cp.SCS, "eps": tol}
 
     problem.solve(
-        max_iters=max_iter, verbose=verbose, warm_start=warm_start, **solve_options
+        max_iters=max_iter, verbose=bool(verbose), warm_start=warm_start, **solve_options
     )
 
     if fit_intercept:
