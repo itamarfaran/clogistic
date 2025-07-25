@@ -182,7 +182,7 @@ def test_as_logistic_regression(fake_data):
 
     clf = ConstrainedLogisticRegression()
     clf.fit(X, y)
-    lr = clf.as_logistic_regression()
+    lr = clf.to_logistic_regression()
 
     assert isinstance(lr, LogisticRegression)
     np.testing.assert_allclose(clf.coef_, lr.coef_)

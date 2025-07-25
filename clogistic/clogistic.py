@@ -21,10 +21,26 @@ from scipy.special import expit
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_consistent_length, compute_class_weight
+from sklearn.utils._param_validation import Interval, StrOptions
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import _check_sample_weight, check_is_fitted
-from sklearn.utils._param_validation import StrOptions, Interval
+
+try:
+    from sklearn.base import _fit_context
+except ImportError:
+    # _fit_context introduced in sklearn 1.3.0,
+    # clogistic supports sklearn>=1.2.0:
+    # this block is to support sklearn>=1.2.0,<1.3.0
+
+    def _fit_context(*, prefer_skip_nested_validation):
+        def decorator(fit_method):
+            def wrapper(estimator, *args, **kwargs):
+                return fit_method(estimator, *args, **kwargs)
+
+            return wrapper
+
+        return decorator
 
 
 PenaltyType = Optional[Literal["l1", "l2", "elasticnet"]]
@@ -505,9 +521,7 @@ class ConstrainedLogisticRegression(LogisticRegression):
             l1_ratio=l1_ratio,
         )
 
-    # TODO: `@_fit_context(prefer_skip_nested_validation=True)` introduced in sklearn
-    #  1.3, but sagemaker supports 1.2.1 - consider not supporting sagemaker default
-    #  image, or add solution to handle both cases
+    @_fit_context(prefer_skip_nested_validation=True)
     def fit(
         self,
         X: np.ndarray,
@@ -633,7 +647,7 @@ class ConstrainedLogisticRegression(LogisticRegression):
 
         return self
 
-    def as_logistic_regression(self) -> LogisticRegression:
+    def to_logistic_regression(self) -> LogisticRegression:
         check_is_fitted(self)
         new = LogisticRegression()
         for k, v in self.__dict__.items():
