@@ -100,7 +100,7 @@ def test_bounds():
     with raises(TypeError):
         ConstrainedLogisticRegression(penalty="l2").fit(X, y, bounds=bounds)
 
-    lb = np.r_[np.full(X.shape[1], -1), -np.inf]
+    lb = np.r_[np.full(X.shape[1] - 1, -1), -np.inf]
     ub = np.r_[np.zeros(X.shape[1] - 1), np.inf]
     bounds = Bounds(lb, ub)
 
@@ -127,7 +127,7 @@ def test_contraints():
         ConstrainedLogisticRegression().fit(X, y, constraints=[A, lb, ub])
 
     lb = np.array([0.0])
-    ub = np.array([0.5, 0.2])
+    ub = np.array([0.5])
     constraints = LinearConstraint(A, lb, ub)
 
     with raises(ValueError):
@@ -157,7 +157,7 @@ def test_predict_breast_cancer():
     # Test that all solvers with all regularizations score (>0.93) for the
     # training data
     for solver in ("L-BFGS-B", "ecos", "scs"):
-        for penalty in ("none", "l1", "l2", "elasticnet"):
+        for penalty in (None, "l1", "l2", "elasticnet"):
             if penalty == "elasticnet":
                 clf = ConstrainedLogisticRegression(
                     solver=solver, penalty=penalty, l1_ratio=0.5
@@ -185,7 +185,7 @@ def test_predict_breast_cancer_no_intercept():
     # Test that all solvers with all regularizations score (>0.93) for the
     # training data without intercept
     for solver in ("L-BFGS-B", "ecos"):
-        for penalty in ("none", "l1", "l2", "elasticnet"):
+        for penalty in (None, "l1", "l2", "elasticnet"):
             if penalty == "elasticnet":
                 clf = ConstrainedLogisticRegression(
                     solver=solver, penalty=penalty, l1_ratio=0.5, fit_intercept=False
@@ -225,7 +225,7 @@ def test_predict_breast_cancer_bounds_constraints():
     # Test that all solvers with all regularizations score (>0.93) for the
     # training data
     for solver in ("ecos", "scs"):
-        for penalty in ("none", "l1", "l2", "elasticnet"):
+        for penalty in (None, "l1", "l2", "elasticnet"):
             if penalty == "elasticnet":
                 clf = ConstrainedLogisticRegression(
                     solver=solver, penalty=penalty, l1_ratio=0.5

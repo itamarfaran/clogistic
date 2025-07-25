@@ -17,83 +17,16 @@ import cvxpy as cp
 import numpy as np
 from scipy.optimize import Bounds, LinearConstraint, minimize
 from scipy.special import expit
-from sklearn.base import BaseEstimator
-from sklearn.linear_model._base import LinearClassifierMixin, SparseCoefMixin
+from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_consistent_length, compute_class_weight
 from sklearn.utils.extmath import log_logistic, safe_sparse_dot
 from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import _check_sample_weight, check_X_y, check_is_fitted
+from sklearn.utils.validation import _check_sample_weight, check_is_fitted
+from sklearn.utils._param_validation import StrOptions, Interval
 
 
-def _check_parameters(
-    penalty,
-    tol,
-    C,
-    fit_intercept,
-    class_weight,
-    solver,
-    max_iter,
-    l1_ratio,
-    warm_start,
-    verbose,
-):
-
-    if penalty not in ("l1", "l2", "elasticnet", "none"):
-        raise ValueError(
-            "Invalid value for penalty. Supported penalties are "
-            '"l1", "l2", "elasticnet" and "none".'
-        )
-
-    if penalty == "elasticnet":
-        if not isinstance(l1_ratio, numbers.Number) or not 0 <= l1_ratio <= 1:
-            raise ValueError(
-                "l1_ratio must be between 0 and 1; got {}.".format(l1_ratio)
-            )
-    elif l1_ratio is not None:
-        warnings.warn(
-            "l1_ratio parameter is only used when penalty is "
-            "'elasticnet'; got penalty={}.".format(penalty)
-        )
-
-    if not isinstance(tol, numbers.Number) or tol < 0:
-        raise ValueError(
-            "tol parameter for stopping criteria must be "
-            "positive; got {}.".format(tol)
-        )
-
-    if not isinstance(fit_intercept, bool):
-        raise TypeError("fit_intercept must be a bool; got {}.".format(fit_intercept))
-
-    if class_weight is not None:
-        if not isinstance(class_weight, (dict, str)):
-            raise TypeError(
-                'class_weight must be dict, "balanced" or None; '
-                "got {}.".format(class_weight)
-            )
-
-        elif isinstance(class_weight, str) and class_weight != "balanced":
-            raise ValueError(
-                "Invalid value for class_weight. Allowed string " 'value is "balanced".'
-            )
-
-    if solver not in ("ecos", "L-BFGS-B", "scs"):
-        raise ValueError(
-            "Invalid value for solver. Allowed string "
-            'values are "ecos", "L-BFGS-B" and "scs".'
-        )
-
-    if not isinstance(max_iter, numbers.Number) or max_iter < 0:
-        raise ValueError("max_iter must be positive; got {}.".format(max_iter))
-
-    if not isinstance(warm_start, bool):
-        raise TypeError("warm_start must be a bool; got {}.".format(warm_start))
-
-    if not isinstance(verbose, bool):
-        raise TypeError("verbose must be a bool; got {}.".format(verbose))
-
-
-def _check_solver(solver, penalty, bounds, constraints, warm_start):
+def _check_solver(solver, penalty, bounds, constraints, warm_start, l1_ratio):
     if solver == "L-BFGS-B":
         if penalty in ("l1", "elasticnet") and bounds is not None:
             raise ValueError(
@@ -114,21 +47,16 @@ def _check_solver(solver, penalty, bounds, constraints, warm_start):
                 'with "l1" and "elasticnet" regularization.'
             )
 
-
-def _check_X_y(X, y):
-    if type_of_target(y) != "binary":
-        raise ValueError("This solver needs a binary target.")
-
-    classes = np.unique(y)
-    if len(classes) < 2:
-        raise ValueError(
-            "This solver needs samples of 2 classes"
-            " in the data, but the data contains only one"
-            " class: {}.".format(classes[0])
+    if penalty == "elasticnet":
+        if not isinstance(l1_ratio, numbers.Number) or not 0 <= l1_ratio <= 1:
+            raise ValueError(
+                "l1_ratio must be between 0 and 1; got {}.".format(l1_ratio)
+            )
+    elif l1_ratio is not None:
+        warnings.warn(
+            "l1_ratio parameter is only used when penalty is "
+            "'elasticnet'; got penalty={}.".format(penalty)
         )
-
-    X, y = check_X_y(X, y, accept_sparse="csr", order="C")
-    return X, y, classes
 
 
 def _check_bounds(bounds, n, fit_intercept):
@@ -287,7 +215,7 @@ def _fit_lbfgsb(
     options = {"disp": verbose, "gtol": tol, "maxiter": max_iter}
 
     res = minimize(
-        func, w0, method="L-BFGS-B", jac=True, bounds=bounds, args=args, options=options
+        func, w0.flatten(), method="L-BFGS-B", jac=True, bounds=bounds, args=args, options=options
     )
 
     if fit_intercept:
@@ -412,9 +340,7 @@ def _fit_cvxpy(
     return coef_, intercept_
 
 
-class ConstrainedLogisticRegression(
-    BaseEstimator, LinearClassifierMixin, SparseCoefMixin
-):
+class ConstrainedLogisticRegression(LogisticRegression):
     """
     Constrained Logistic Regression (aka logit, MaxEnt) classifier.
 
@@ -460,7 +386,7 @@ class ConstrainedLogisticRegression(
         Algorithm/solver to use in the optimization problem.
 
         - Unconstrained 'L-BFGS-B' handles all regularizations.
-        - Bound constrainted 'L-BFGS-B' handles L2 or no penalty.
+        - Bound constrained 'L-BFGS-B' handles L2 or no penalty.
         - For other cases, use 'ecos' or 'scs'.
 
         Note that 'ecos' and 'scs' are general-purpose solvers called via
@@ -503,30 +429,47 @@ class ConstrainedLogisticRegression(
         http://users.iems.northwestern.edu/~nocedal/L-BFGS-Bb.html
     """
 
+    _parameter_constraints: dict = {
+        "penalty": [StrOptions({"l1", "l2", "elasticnet"}), None],
+        "tol": [Interval(numbers.Real, 0, None, closed="left")],
+        "C": [Interval(numbers.Real, 0, None, closed="right")],
+        "fit_intercept": ["boolean"],
+        "class_weight": [dict, StrOptions({"balanced"}), None],
+        "solver": [StrOptions({"ecos", "L-BFGS-B", "scs"})],
+        "max_iter": [Interval(numbers.Integral, 0, None, closed="left")],
+        "verbose": ["verbose"],
+        "warm_start": ["boolean"],
+        "l1_ratio": [Interval(numbers.Real, 0, 1, closed="both"), None],
+    }
+
     def __init__(
         self,
         penalty="l2",
+        *,
         tol=1e-4,
         C=1.0,
         fit_intercept=True,
         class_weight=None,
         solver="ecos",
         max_iter=100,
-        l1_ratio=None,
+        verbose=0,
         warm_start=False,
-        verbose=False,
+        l1_ratio=None,
+        **kwargs,
     ):
-
-        self.penalty = penalty
-        self.tol = tol
-        self.C = C
-        self.fit_intercept = fit_intercept
-        self.class_weight = class_weight
-        self.solver = solver
-        self.max_iter = max_iter
-        self.l1_ratio = l1_ratio
-        self.warm_start = warm_start
-        self.verbose = verbose
+        super().__init__(
+            penalty=penalty,
+            tol=tol,
+            C=C,
+            fit_intercept=fit_intercept,
+            class_weight=class_weight,
+            solver=solver,
+            max_iter=max_iter,
+            verbose=verbose,
+            warm_start=warm_start,
+            l1_ratio=l1_ratio,
+            **kwargs,
+        )
 
     def fit(self, X, y, sample_weight=None, bounds=None, constraints=None):
         """
@@ -556,14 +499,25 @@ class ConstrainedLogisticRegression(
         self
             Fitted estimator.
         """
-        _check_parameters(**self.get_params())
+        self._validate_params()
 
-        _check_solver(self.solver, self.penalty, bounds, constraints, self.warm_start)
+        _check_solver(self.solver, self.penalty, bounds, constraints, self.warm_start, self.l1_ratio)
 
-        X, y, self.classes_ = _check_X_y(X, y)
+        X, y = self._validate_data(X, y, accept_sparse="csr", order="C")
 
-        self.classes_ = np.unique(y)
+        if type_of_target(y) != "binary":
+            raise ValueError("This solver needs a binary target.")
+
         n_samples, n_features = X.shape
+        self.n_features_in_ = n_features
+        self.classes_ = np.unique(y)
+
+        if len(self.classes_) < 2:
+            raise ValueError(
+                "This solver needs samples of at least 2 classes"
+                " in the data, but the data contains only one"
+                " class: %r" % self.classes_[0]
+            )
 
         if bounds is not None:
             _check_bounds(bounds, n_features, self.fit_intercept)
@@ -624,54 +578,13 @@ class ConstrainedLogisticRegression(
 
         self.coef_ = np.asarray([coef_])
         self.intercept_ = np.asarray([intercept_])
+        self.n_iter_ = np.zeros((len(self.classes_),), dtype=np.int32)
 
         return self
 
-    def predict_proba(self, X):
-        """
-        Probability estimates.
-
-        The returned estimates for all classes are ordered by the
-        label of classes.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Vector to be scored, where `n_samples` is the number of samples and
-            `n_features` is the number of features.
-
-        Returns
-        -------
-        T : array-like of shape (n_samples, n_classes)
-            Returns the probability of the sample for each class in the model,
-            where classes are ordered as they are in ``self.classes_``.
-        """
+    def as_logistic_regression(self) -> LogisticRegression:
         check_is_fitted(self)
-
-        proba = np.empty((X.shape[0], 2))
-        p0 = expit(-self.decision_function(X))
-        proba[:, 0] = p0
-        proba[:, 1] = 1 - p0
-
-        return proba
-
-    def predict_log_proba(self, X):
-        """
-        Predict logarithm of probability estimates.
-
-        The returned estimates for all classes are ordered by the
-        label of classes.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Vector to be scored, where `n_samples` is the number of samples and
-            `n_features` is the number of features.
-
-        Returns
-        -------
-        T : array-like of shape (n_samples, n_classes)
-            Returns the log-probability of the sample for each class in the
-            model, where classes are ordered as they are in ``self.classes_``.
-        """
-        return np.log(self.predict_proba(X))
+        new = LogisticRegression()
+        for k, v in self.__dict__.items():
+            setattr(new, k, v)
+        return new

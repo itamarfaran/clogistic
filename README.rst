@@ -141,7 +141,7 @@ in this case, it is unconstrained.
 L2-norm with bounds
 -------------------
 
-If we choose ``penalty="l2"`` or ``penalty="none"``, the L-BFGS-B solver can handle bound constraints.
+If we choose ``penalty="l2"`` or ``penalty=None``, the L-BFGS-B solver can handle bound constraints.
 
 .. code-block:: python
 
