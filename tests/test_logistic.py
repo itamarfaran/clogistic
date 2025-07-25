@@ -1,71 +1,50 @@
 import numpy as np
 import pytest
-
 from scipy.optimize import Bounds, LinearConstraint
 from scipy.special import expit
-from sklearn.datasets import load_breast_cancer
 from sklearn.linear_model import LogisticRegression
 
 from clogistic import ConstrainedLogisticRegression
+from tests.conftest import fake_data
 
 
-def test_parameters():
-    # Test parameters
-    X, y = load_breast_cancer(return_X_y=True)
-
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"penalty": "new_penalty"},
+        {"penalty": "elasticnet"},
+        {"tol": -1e-3},
+        {"fit_intercept": 0},
+        {"class_weight": []},
+        {"class_weight": "unbalanced"},
+        {"solver": "new_solver"},
+        {"max_iter": -10},
+        {"warm_start": 1},
+        {"solver": "lbfgs", "penalty": "l1", "warm_start": True},
+        {"solver": "lbfgs", "penalty": "elasticnet", "warm_start": True},
+    ],
+)
+def test_parameters(fake_data, kwargs):
     with pytest.raises(ValueError):
-        ConstrainedLogisticRegression(penalty="new_penalty").fit(X, y)
-
-    with pytest.raises(ValueError):
-        ConstrainedLogisticRegression(penalty="elasticnet").fit(X, y)
-
-    with pytest.raises(ValueError):
-        ConstrainedLogisticRegression(tol=-1e-3).fit(X, y)
-
-    with pytest.raises(TypeError):
-        ConstrainedLogisticRegression(fit_intercept=0).fit(X, y)
-
-    with pytest.raises(TypeError):
-        ConstrainedLogisticRegression(class_weight=[]).fit(X, y)
-
-    with pytest.raises(ValueError):
-        ConstrainedLogisticRegression(class_weight="unbalanced").fit(X, y)
-
-    with pytest.raises(ValueError):
-        ConstrainedLogisticRegression(solver="new_solver").fit(X, y)
-
-    with pytest.raises(ValueError):
-        ConstrainedLogisticRegression(max_iter=-10).fit(X, y)
-
-    with pytest.raises(TypeError):
-        ConstrainedLogisticRegression(warm_start=1).fit(X, y)
+        ConstrainedLogisticRegression(**kwargs).fit(*fake_data)
 
 
-def test_solver():
-    X, y = load_breast_cancer(return_X_y=True)
-
-    clfs = [
-        ConstrainedLogisticRegression(solver="lbfgs", penalty="l1", warm_start=True),
-        ConstrainedLogisticRegression(
-            solver="lbfgs", penalty="elasticnet", warm_start=True
-        ),
-    ]
-    for clf in clfs:
-        with pytest.raises(ValueError):
-            clf.fit(X, y)
+@pytest.mark.parametrize(
+    "clf",
+    [
+        ConstrainedLogisticRegression(solver="lbfgs", penalty="l1"),
+        ConstrainedLogisticRegression(solver="lbfgs", penalty="elasticnet"),
+    ],
+)
+def test_solver(fake_data, clf):
+    X, y = fake_data
 
     lb = np.r_[np.full(X.shape[1], -1), -np.inf]
     ub = np.r_[np.zeros(X.shape[1]), np.inf]
     bounds = Bounds(lb, ub)
 
-    clfs = [
-        ConstrainedLogisticRegression(solver="lbfgs", penalty="l1"),
-        ConstrainedLogisticRegression(solver="lbfgs", penalty="elasticnet"),
-    ]
-
-    for clf in clfs:
-        with pytest.raises(ValueError):
-            clf.fit(X, y, bounds=bounds)
+    with pytest.raises(ValueError):
+        clf.fit(X, y, bounds=bounds)
 
     lb = np.array([0.0])
     ub = np.array([0.5])
@@ -73,84 +52,45 @@ def test_solver():
     A[0, :2] = np.array([-1, 1])
     constraints = LinearConstraint(A, lb, ub)
 
-    for clf in clfs:
-        with pytest.raises(ValueError):
-            clf.fit(X, y, constraints=constraints)
+    with pytest.raises(ValueError):
+        clf.fit(X, y, constraints=constraints)
 
 
-def test_target():
-    X, y = load_breast_cancer(return_X_y=True)
+def test_target(fake_data):
+    X, y = fake_data
 
     with pytest.raises(ValueError):
-        y2 = np.random.randn(y.size)
-        ConstrainedLogisticRegression().fit(X, y2)
+        ConstrainedLogisticRegression().fit(X, np.random.randn(y.size))
 
     with pytest.raises(ValueError):
-        y2 = np.ones(y.size)
-        ConstrainedLogisticRegression().fit(X, y2)
+        ConstrainedLogisticRegression().fit(X, np.ones(y.size))
 
 
-def test_bounds():
-    X, y = load_breast_cancer(return_X_y=True)
-
-    bounds = [(-np.inf, np.inf)] * X.shape[1]
-    with pytest.raises(TypeError):
-        ConstrainedLogisticRegression(penalty="l2").fit(X, y, bounds=bounds)
-
+def test_bounds_and_constraints(fake_data):
+    X, y = fake_data
     lb = np.r_[np.full(X.shape[1] - 1, -1), -np.inf]
     ub = np.r_[np.zeros(X.shape[1] - 1), np.inf]
-    bounds = Bounds(lb, ub)
-
-    with pytest.raises(ValueError):
-        ConstrainedLogisticRegression(penalty="l2").fit(X, y, bounds=bounds)
-
-    lb = np.r_[np.full(X.shape[1] - 1, -1), -np.inf]
-    ub = np.r_[np.zeros(X.shape[1] - 1), np.inf]
-    bounds = Bounds(lb, ub)
-
-    with pytest.raises(ValueError):
-        ConstrainedLogisticRegression(penalty="l2").fit(X, y, bounds=bounds)
-
-
-@pytest.mark.skip(reason="these issues are dalt internally within scipy")
-def test_constraints():
-    X, y = load_breast_cancer(return_X_y=True)
-
-    lb = np.array([0.0])
-    ub = np.array([0.5])
-    A = np.zeros((1, X.shape[1] + 1))
-    A[0, :2] = np.array([-1, 1])
 
     with pytest.raises(TypeError):
-        ConstrainedLogisticRegression().fit(X, y, constraints=[A, lb, ub])
-
-    lb = np.array([0.0])
-    ub = np.array([0.5])
-    constraints = LinearConstraint(A, lb, ub)
+        ConstrainedLogisticRegression(penalty="l2").fit(X, y, bounds=[(-np.inf, np.inf)] * X.shape[1])
 
     with pytest.raises(ValueError):
-        ConstrainedLogisticRegression().fit(X, y, constraints=constraints)
+        ConstrainedLogisticRegression(penalty="l2").fit(X, y, bounds=Bounds(lb, ub))
 
     lb = np.array([0.0])
     ub = np.array([0.5])
     A = np.zeros((1, X.shape[1]))
-    constraints = LinearConstraint(A, lb, ub)
+
+    with pytest.raises(TypeError):
+        ConstrainedLogisticRegression().fit(X, y, constraints=[A, lb, ub])
 
     with pytest.raises(ValueError):
-        ConstrainedLogisticRegression().fit(X, y, constraints=constraints)
-
-    lb = np.array([0.0, 0.2])
-    ub = np.array([0.5, 0.2])
-    A = np.zeros((1, X.shape[1] + 1))
-    constraints = LinearConstraint(A, lb, ub)
-
-    with pytest.raises(ValueError):
-        ConstrainedLogisticRegression().fit(X, y, constraints=constraints)
+        ConstrainedLogisticRegression().fit(X, y, constraints=LinearConstraint(A, lb, ub))
 
 
-def test_predict_breast_cancer():
+def test_predict_breast_cancer(breast_cancer_data):
     # Test constrained logistic regression with the breast cancer dataset
-    X, y = load_breast_cancer(return_X_y=True)
+    X, y = breast_cancer_data
 
     # Test that all solvers with all regularizations score (>0.93) for the
     # training data
@@ -173,9 +113,9 @@ def test_predict_breast_cancer():
             assert np.mean(pred == y) > 0.9
 
 
-def test_predict_breast_cancer_no_intercept():
+def test_predict_breast_cancer_no_intercept(breast_cancer_data):
     # Test constrained logistic regression with the breast cancer dataset
-    X, y = load_breast_cancer(return_X_y=True)
+    X, y = breast_cancer_data
 
     # Test that all solvers with all regularizations score (>0.93) for the
     # training data without intercept
@@ -198,9 +138,9 @@ def test_predict_breast_cancer_no_intercept():
             assert np.mean(pred == y) > 0.9
 
 
-def test_predict_breast_cancer_bounds_constraints():
+def test_predict_breast_cancer_bounds_constraints(breast_cancer_data):
     # Test constrained logistic regression with the breast cancer dataset
-    X, y = load_breast_cancer(return_X_y=True)
+    X, y = breast_cancer_data
 
     lb = np.r_[np.full(X.shape[1], -1), -np.inf]
     ub = np.r_[np.zeros(X.shape[1]), np.inf]
@@ -233,8 +173,8 @@ def test_predict_breast_cancer_bounds_constraints():
             assert np.mean(pred == y) > 0.9
 
 
-def test_warm_start():
-    X, y = load_breast_cancer(return_X_y=True)
+def test_warm_start(breast_cancer_data):
+    X, y = breast_cancer_data
 
     clf_l2_lbfgsb = ConstrainedLogisticRegression(
         solver="lbfgs", penalty="l2", warm_start=True
@@ -252,8 +192,8 @@ def test_warm_start():
         assert score1 == pytest.approx(score2, rel=1e-1)
 
 
-def test_class_weight():
-    X, y = load_breast_cancer(return_X_y=True)
+def test_class_weight(breast_cancer_data):
+    X, y = breast_cancer_data
 
     clf_l2_lbfgsb = ConstrainedLogisticRegression(
         solver="lbfgs", penalty="l2", class_weight="balanced"
@@ -268,8 +208,8 @@ def test_class_weight():
         assert np.mean(pred == y) > 0.93
 
 
-def test_as_logistic_regression():
-    X, y = load_breast_cancer(return_X_y=True)
+def test_as_logistic_regression(breast_cancer_data):
+    X, y = breast_cancer_data
 
     clf = ConstrainedLogisticRegression()
     clf.fit(X, y)
