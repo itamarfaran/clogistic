@@ -17,10 +17,10 @@ Elastic-Net regularization.
 
 # install requirements
 install_requires = [
-    "cvxpy>=1.0.31",
-    "numpy>=1.16",
-    "scipy",
-    "scikit-learn>=0.20.0",
+    "cvxpy>=1.4.0",
+    "numpy>=1.26.4",
+    "scikit-learn>=1.5.0",
+    "scipy>=1.12.0",
 ]
 
 
@@ -42,7 +42,7 @@ setup(
     platforms="any",
     include_package_data=True,
     license="Apache Licence 2.0",
-    python_requires=">=3.6",
+    python_requires=">=3.10.0",
     install_requires=install_requires,
     tests_require=["pytest"],
     classifiers=[
