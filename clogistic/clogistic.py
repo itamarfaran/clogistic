@@ -412,7 +412,9 @@ def _fit_cvxpy(
     return coef_, intercept_
 
 
-class LogisticRegression(BaseEstimator, LinearClassifierMixin, SparseCoefMixin):
+class ConstrainedLogisticRegression(
+    BaseEstimator, LinearClassifierMixin, SparseCoefMixin
+):
     """
     Constrained Logistic Regression (aka logit, MaxEnt) classifier.
 
