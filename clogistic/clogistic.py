@@ -15,21 +15,15 @@ import warnings
 
 import cvxpy as cp
 import numpy as np
-
 from scipy.optimize import Bounds, LinearConstraint, minimize
 from scipy.special import expit
-
 from sklearn.base import BaseEstimator
-from sklearn.linear_model._base import LinearClassifierMixin
-from sklearn.linear_model._base import SparseCoefMixin
+from sklearn.linear_model._base import LinearClassifierMixin, SparseCoefMixin
 from sklearn.preprocessing import LabelEncoder
-from sklearn.utils import check_consistent_length
-from sklearn.utils import compute_class_weight
+from sklearn.utils import check_consistent_length, compute_class_weight
 from sklearn.utils.extmath import log_logistic, safe_sparse_dot
 from sklearn.utils.multiclass import type_of_target
-from sklearn.utils.validation import check_is_fitted
-from sklearn.utils.validation import check_X_y
-from sklearn.utils.validation import _check_sample_weight
+from sklearn.utils.validation import _check_sample_weight, check_X_y, check_is_fitted
 
 
 def _check_parameters(
