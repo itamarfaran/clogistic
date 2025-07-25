@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import pytest
 from scipy.optimize import Bounds, LinearConstraint
@@ -88,57 +90,42 @@ def test_bounds_and_constraints(fake_data):
         ConstrainedLogisticRegression().fit(X, y, constraints=LinearConstraint(A, lb, ub))
 
 
-def test_predict_breast_cancer(breast_cancer_data):
-    # Test constrained logistic regression with the breast cancer dataset
+@pytest.mark.parametrize(
+    "solver, penalty, fit_intercept",
+    itertools.product(
+        ("lbfgs", "ecos", "scs"),
+        (None, "l1", "l2", "elasticnet"),
+        (True, False),
+    ),
+)
+def test_predict_breast_cancer(breast_cancer_data, solver, penalty, fit_intercept):
     X, y = breast_cancer_data
 
-    # Test that all solvers with all regularizations score (>0.93) for the
-    # training data
-    for solver in ("lbfgs", "ecos", "scs"):
-        for penalty in (None, "l1", "l2", "elasticnet"):
-            clf = ConstrainedLogisticRegression(
-                solver=solver, penalty=penalty, l1_ratio=0.5
-            )
-
-            clf.fit(X, y)
-            assert np.all(np.unique(y) == clf.classes_)
-
-            pred = clf.predict(X)
-            assert np.mean(pred == y) > 0.93
-
-            probabilities = clf.predict_proba(X)
-            assert probabilities.sum(axis=1) == pytest.approx(np.ones(X.shape[0]))
-
-            pred = clf.classes_[np.argmax(clf.predict_log_proba(X), axis=1)]
-            assert np.mean(pred == y) > 0.9
-
-
-def test_predict_breast_cancer_no_intercept(breast_cancer_data):
     # Test constrained logistic regression with the breast cancer dataset
-    X, y = breast_cancer_data
+    # Test that all solvers with all regularizations score (>0.93) for the training data
+    clf = ConstrainedLogisticRegression(solver=solver, penalty=penalty, l1_ratio=0.5)
 
-    # Test that all solvers with all regularizations score (>0.93) for the
-    # training data without intercept
-    for solver in ("lbfgs", "ecos"):
-        for penalty in (None, "l1", "l2", "elasticnet"):
-            clf = ConstrainedLogisticRegression(
-                solver=solver, penalty=penalty, l1_ratio=0.5, fit_intercept=False
-            )
+    clf.fit(X, y)
+    assert np.all(np.unique(y) == clf.classes_)
 
-            clf.fit(X, y)
-            assert np.all(np.unique(y) == clf.classes_)
+    pred = clf.predict(X)
+    assert np.mean(pred == y) > 0.93
 
-            pred = clf.predict(X)
-            assert np.mean(pred == y) > 0.93
+    probabilities = clf.predict_proba(X)
+    assert probabilities.sum(axis=1) == pytest.approx(np.ones(X.shape[0]))
 
-            probabilities = clf.predict_proba(X)
-            assert probabilities.sum(axis=1) == pytest.approx(np.ones(X.shape[0]))
-
-            pred = clf.classes_[np.argmax(clf.predict_log_proba(X), axis=1)]
-            assert np.mean(pred == y) > 0.9
+    pred = clf.classes_[np.argmax(clf.predict_log_proba(X), axis=1)]
+    assert np.mean(pred == y) > 0.9
 
 
-def test_predict_breast_cancer_bounds_constraints(breast_cancer_data):
+@pytest.mark.parametrize(
+    "solver, penalty",
+    itertools.product(
+        ("ecos", "scs"),
+        (None, "l1", "l2", "elasticnet"),
+    ),
+)
+def test_predict_breast_cancer_bounds_constraints(breast_cancer_data, solver, penalty):
     # Test constrained logistic regression with the breast cancer dataset
     X, y = breast_cancer_data
 
@@ -152,44 +139,30 @@ def test_predict_breast_cancer_bounds_constraints(breast_cancer_data):
     A[0, :2] = np.array([-1, 1])
     constraints = LinearConstraint(A, lb, ub)
 
-    # Test that all solvers with all regularizations score (>0.93) for the
-    # training data
-    for solver in ("ecos", "scs"):
-        for penalty in (None, "l1", "l2", "elasticnet"):
-            clf = ConstrainedLogisticRegression(
-                solver=solver, penalty=penalty, l1_ratio=0.5
-            )
+    # Test that all solvers with all regularizations score (>0.93) for the training data
+    clf = ConstrainedLogisticRegression(solver=solver, penalty=penalty, l1_ratio=0.5)
 
-            clf.fit(X, y, bounds=bounds, constraints=constraints)
-            assert np.all(np.unique(y) == clf.classes_)
+    clf.fit(X, y, bounds=bounds, constraints=constraints)
+    assert np.all(np.unique(y) == clf.classes_)
 
-            pred = clf.predict(X)
-            assert np.mean(pred == y) > 0.93
+    pred = clf.predict(X)
+    assert np.mean(pred == y) > 0.93
 
-            probabilities = clf.predict_proba(X)
-            assert probabilities.sum(axis=1) == pytest.approx(np.ones(X.shape[0]))
+    probabilities = clf.predict_proba(X)
+    assert probabilities.sum(axis=1) == pytest.approx(np.ones(X.shape[0]))
 
-            pred = clf.classes_[np.argmax(clf.predict_log_proba(X), axis=1)]
-            assert np.mean(pred == y) > 0.9
+    pred = clf.classes_[np.argmax(clf.predict_log_proba(X), axis=1)]
+    assert np.mean(pred == y) > 0.9
 
 
-def test_warm_start(breast_cancer_data):
+@pytest.mark.parametrize("solver", ("ecos", "scs"))
+def test_warm_start(breast_cancer_data, solver):
     X, y = breast_cancer_data
+    clf = ConstrainedLogisticRegression(solver=solver, penalty="l2", warm_start=True)
 
-    clf_l2_lbfgsb = ConstrainedLogisticRegression(
-        solver="lbfgs", penalty="l2", warm_start=True
-    )
-    clf_l2_ecos = ConstrainedLogisticRegression(
-        solver="ecos", penalty="l2", warm_start=True
-    )
-
-    for clf in (clf_l2_lbfgsb, clf_l2_ecos):
-        clf.fit(X, y)
-        score1 = clf.score(X, y)
-        clf.fit(X, y)
-        score2 = clf.score(X, y)
-
-        assert score1 == pytest.approx(score2, rel=1e-1)
+    score1 = clf.fit(X, y).score(X, y)
+    score2 = clf.fit(X, y).score(X, y)
+    assert score1 == pytest.approx(score2, rel=1e-1)
 
 
 def test_class_weight(breast_cancer_data):
