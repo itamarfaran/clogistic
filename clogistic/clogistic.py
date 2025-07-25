@@ -495,7 +495,6 @@ class ConstrainedLogisticRegression(LogisticRegression):
         verbose: Union[int, bool] = 0,
         warm_start: bool = False,
         l1_ratio: Optional[float] = None,
-        **kwargs,
     ):
         super().__init__(
             penalty=penalty,
@@ -508,7 +507,6 @@ class ConstrainedLogisticRegression(LogisticRegression):
             verbose=verbose,
             warm_start=warm_start,
             l1_ratio=l1_ratio,
-            **kwargs,
         )
 
     def fit(

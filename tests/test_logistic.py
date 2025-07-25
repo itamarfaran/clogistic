@@ -2,7 +2,9 @@ import numpy as np
 import pytest
 
 from scipy.optimize import Bounds, LinearConstraint
+from scipy.special import expit
 from sklearn.datasets import load_breast_cancer
+from sklearn.linear_model import LogisticRegression
 
 from clogistic import ConstrainedLogisticRegression
 
@@ -154,12 +156,9 @@ def test_predict_breast_cancer():
     # training data
     for solver in ("L-BFGS-B", "ecos", "scs"):
         for penalty in (None, "l1", "l2", "elasticnet"):
-            if penalty == "elasticnet":
-                clf = ConstrainedLogisticRegression(
-                    solver=solver, penalty=penalty, l1_ratio=0.5
-                )
-            else:
-                clf = ConstrainedLogisticRegression(solver=solver, penalty=penalty)
+            clf = ConstrainedLogisticRegression(
+                solver=solver, penalty=penalty, l1_ratio=0.5
+            )
 
             clf.fit(X, y)
             assert np.all(np.unique(y) == clf.classes_)
@@ -182,14 +181,9 @@ def test_predict_breast_cancer_no_intercept():
     # training data without intercept
     for solver in ("L-BFGS-B", "ecos"):
         for penalty in (None, "l1", "l2", "elasticnet"):
-            if penalty == "elasticnet":
-                clf = ConstrainedLogisticRegression(
-                    solver=solver, penalty=penalty, l1_ratio=0.5, fit_intercept=False
-                )
-            else:
-                clf = ConstrainedLogisticRegression(
-                    solver=solver, penalty=penalty, fit_intercept=False
-                )
+            clf = ConstrainedLogisticRegression(
+                solver=solver, penalty=penalty, l1_ratio=0.5, fit_intercept=False
+            )
 
             clf.fit(X, y)
             assert np.all(np.unique(y) == clf.classes_)
@@ -222,12 +216,9 @@ def test_predict_breast_cancer_bounds_constraints():
     # training data
     for solver in ("ecos", "scs"):
         for penalty in (None, "l1", "l2", "elasticnet"):
-            if penalty == "elasticnet":
-                clf = ConstrainedLogisticRegression(
-                    solver=solver, penalty=penalty, l1_ratio=0.5
-                )
-            else:
-                clf = ConstrainedLogisticRegression(solver=solver, penalty=penalty)
+            clf = ConstrainedLogisticRegression(
+                solver=solver, penalty=penalty, l1_ratio=0.5
+            )
 
             clf.fit(X, y, bounds=bounds, constraints=constraints)
             assert np.all(np.unique(y) == clf.classes_)
@@ -275,3 +266,40 @@ def test_class_weight():
         clf.fit(X, y)
         pred = clf.predict(X)
         assert np.mean(pred == y) > 0.93
+
+
+def test_as_logistic_regression():
+    X, y = load_breast_cancer(return_X_y=True)
+
+    clf = ConstrainedLogisticRegression()
+    clf.fit(X, y)
+    lr = clf.as_logistic_regression()
+
+    assert isinstance(lr, LogisticRegression)
+    np.testing.assert_allclose(clf.coef_, lr.coef_)
+    np.testing.assert_allclose(clf.intercept_, lr.intercept_)
+    np.testing.assert_allclose(clf.predict_proba(X), lr.predict_proba(X))
+    np.testing.assert_allclose(clf.predict(X), lr.predict(X))
+
+    with pytest.raises(ValueError):
+        lr.fit(X, y)  # solver is "ecos"
+
+
+def test_close_to_unconstrained():
+    rng = np.random.default_rng(42)
+    X = rng.random((1_000, 10))
+    w = rng.uniform(-0.4, 0.4, X.shape[1])
+
+    lr = LogisticRegression()
+    clf = ConstrainedLogisticRegression(solver="L-BFGS-B")
+    unbounded_intercept = Bounds([0] * (X.shape[1]) + [-np.inf])
+
+    y = rng.binomial(1, expit(X @ w))
+    lr.fit(X, y)
+    clf.fit(X, y, bounds=unbounded_intercept)
+    assert not np.array_equal(clf.coef_, lr.coef_)
+
+    y_pos = rng.binomial(1, expit(X @ np.abs(w)))
+    lr.fit(X, y_pos)
+    clf.fit(X, y_pos, bounds=unbounded_intercept)
+    np.testing.assert_allclose(clf.coef_, lr.coef_, atol=1e-2)
