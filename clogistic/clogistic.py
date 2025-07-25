@@ -41,10 +41,8 @@ def _check_solver(
     if solver == "lbfgs":
         if penalty in ("l1", "elasticnet") and bounds is not None:
             raise ValueError(
-                'Solver "lbfgs" does not support bound '
-                'constraints with penalty "l1" and '
-                '"elasticnet"; choose either "ecos" or "scs" '
-                "solver."
+                "Solver 'lbfgs' does not support bound constraints with penalty "
+                "'l1' and 'elasticnet'; choose either 'ecos' or 'scs' solver."
             )
 
         if constraints is not None:
@@ -52,8 +50,8 @@ def _check_solver(
 
         if penalty in ("l1", "elasticnet") and warm_start:
             raise ValueError(
-                'Solver "lbfgs" does not support warm start '
-                'with "l1" and "elasticnet" regularization.'
+                "Solver 'lbfgs' does not support warm start with 'l1' "
+                "and 'elasticnet' regularization."
             )
 
     if penalty == "elasticnet":
@@ -63,8 +61,8 @@ def _check_solver(
             )
     elif l1_ratio is not None:
         warnings.warn(
-            "l1_ratio parameter is only used when penalty is "
-            "'elasticnet'; got penalty={}.".format(penalty)
+            "l1_ratio parameter is only used when penalty "
+            "is 'elasticnet'; got penalty={}.".format(penalty)
         )
 
 
