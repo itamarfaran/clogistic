@@ -10,10 +10,9 @@ def fake_data(n: int = 1_000, p: int = 10, seed: int = 42):
     X = rng.random((n, p))
     w = rng.uniform(-0.4, 0.4, p)
     y = rng.binomial(1, expit(X @ w))
-    return X, y
+    return X, y, w
 
 
 @pytest.fixture(scope="session")
 def breast_cancer_data():
     return load_breast_cancer(return_X_y=True)
-

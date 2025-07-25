@@ -39,7 +39,7 @@ def test_parameters(fake_data, kwargs):
     ],
 )
 def test_solver(fake_data, clf):
-    X, y = fake_data
+    X, y, _ = fake_data
 
     lb = np.r_[np.full(X.shape[1], -1), -np.inf]
     ub = np.r_[np.zeros(X.shape[1]), np.inf]
@@ -59,7 +59,7 @@ def test_solver(fake_data, clf):
 
 
 def test_target(fake_data):
-    X, y = fake_data
+    X, y, _ = fake_data
 
     with pytest.raises(ValueError):
         ConstrainedLogisticRegression().fit(X, np.random.randn(y.size))
@@ -69,7 +69,7 @@ def test_target(fake_data):
 
 
 def test_bounds_and_constraints(fake_data):
-    X, y = fake_data
+    X, y, _ = fake_data
     lb = np.r_[np.full(X.shape[1] - 1, -1), -np.inf]
     ub = np.r_[np.zeros(X.shape[1] - 1), np.inf]
 
@@ -165,24 +165,24 @@ def test_warm_start(breast_cancer_data, solver):
     assert score1 == pytest.approx(score2, rel=1e-1)
 
 
-def test_class_weight(breast_cancer_data):
+@pytest.mark.parametrize(
+    "solver, class_weight",
+    [
+        ("lbfgs", "balanced"),
+        ("ecos", {0: 1, 1: 5}),
+    ],
+)
+def test_class_weight(breast_cancer_data, solver, class_weight):
     X, y = breast_cancer_data
-
-    clf_l2_lbfgsb = ConstrainedLogisticRegression(
-        solver="lbfgs", penalty="l2", class_weight="balanced"
+    clf = ConstrainedLogisticRegression(
+        solver=solver, penalty="l2", class_weight=class_weight
     )
-    clf_l2_ecos = ConstrainedLogisticRegression(
-        solver="ecos", penalty="l2", class_weight={0: 1, 1: 5}
-    )
-
-    for clf in (clf_l2_lbfgsb, clf_l2_ecos):
-        clf.fit(X, y)
-        pred = clf.predict(X)
-        assert np.mean(pred == y) > 0.93
+    pred = clf.fit(X, y).predict(X)
+    assert np.mean(pred == y) > 0.93
 
 
-def test_as_logistic_regression(breast_cancer_data):
-    X, y = breast_cancer_data
+def test_as_logistic_regression(fake_data):
+    X, y, _ = fake_data
 
     clf = ConstrainedLogisticRegression()
     clf.fit(X, y)
@@ -198,21 +198,19 @@ def test_as_logistic_regression(breast_cancer_data):
         lr.fit(X, y)  # solver is "ecos"
 
 
-def test_close_to_unconstrained():
+def test_close_to_unconstrained(fake_data):
     rng = np.random.default_rng(42)
-    X = rng.random((1_000, 10))
-    w = rng.uniform(-0.4, 0.4, X.shape[1])
+    X, y, w = fake_data
+    y_pos = rng.binomial(1, expit(X @ np.abs(w)))
 
     lr = LogisticRegression()
     clf = ConstrainedLogisticRegression(solver="lbfgs")
     unbounded_intercept = Bounds([0] * (X.shape[1]) + [-np.inf])
 
-    y = rng.binomial(1, expit(X @ w))
     lr.fit(X, y)
     clf.fit(X, y, bounds=unbounded_intercept)
     assert not np.array_equal(clf.coef_, lr.coef_)
 
-    y_pos = rng.binomial(1, expit(X @ np.abs(w)))
     lr.fit(X, y_pos)
     clf.fit(X, y_pos, bounds=unbounded_intercept)
     np.testing.assert_allclose(clf.coef_, lr.coef_, atol=1e-2)
