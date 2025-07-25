@@ -41,7 +41,7 @@ Dependencies
 
 * cvxpy>=1.4.0
 * numpy>=1.26.4
-* scikit-learn>=1.5.0
+* scikit-learn>=1.2.0
 * scipy>=1.12.0
 
 

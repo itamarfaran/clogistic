@@ -507,6 +507,9 @@ class ConstrainedLogisticRegression(LogisticRegression):
             l1_ratio=l1_ratio,
         )
 
+    # TODO: `@_fit_context(prefer_skip_nested_validation=True)` introduced in sklearn
+    #  1.3, but sagemaker supports 1.2.1 - consider not supporting sagemaker default
+    #  image, or add solution to handle both cases
     def fit(
         self,
         X: np.ndarray,
