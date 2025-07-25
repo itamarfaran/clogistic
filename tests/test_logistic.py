@@ -45,9 +45,9 @@ def test_solver():
     X, y = load_breast_cancer(return_X_y=True)
 
     clfs = [
-        ConstrainedLogisticRegression(solver="L-BFGS-B", penalty="l1", warm_start=True),
+        ConstrainedLogisticRegression(solver="lbfgs", penalty="l1", warm_start=True),
         ConstrainedLogisticRegression(
-            solver="L-BFGS-B", penalty="elasticnet", warm_start=True
+            solver="lbfgs", penalty="elasticnet", warm_start=True
         ),
     ]
     for clf in clfs:
@@ -59,8 +59,8 @@ def test_solver():
     bounds = Bounds(lb, ub)
 
     clfs = [
-        ConstrainedLogisticRegression(solver="L-BFGS-B", penalty="l1"),
-        ConstrainedLogisticRegression(solver="L-BFGS-B", penalty="elasticnet"),
+        ConstrainedLogisticRegression(solver="lbfgs", penalty="l1"),
+        ConstrainedLogisticRegression(solver="lbfgs", penalty="elasticnet"),
     ]
 
     for clf in clfs:
@@ -154,7 +154,7 @@ def test_predict_breast_cancer():
 
     # Test that all solvers with all regularizations score (>0.93) for the
     # training data
-    for solver in ("L-BFGS-B", "ecos", "scs"):
+    for solver in ("lbfgs", "ecos", "scs"):
         for penalty in (None, "l1", "l2", "elasticnet"):
             clf = ConstrainedLogisticRegression(
                 solver=solver, penalty=penalty, l1_ratio=0.5
@@ -179,7 +179,7 @@ def test_predict_breast_cancer_no_intercept():
 
     # Test that all solvers with all regularizations score (>0.93) for the
     # training data without intercept
-    for solver in ("L-BFGS-B", "ecos"):
+    for solver in ("lbfgs", "ecos"):
         for penalty in (None, "l1", "l2", "elasticnet"):
             clf = ConstrainedLogisticRegression(
                 solver=solver, penalty=penalty, l1_ratio=0.5, fit_intercept=False
@@ -237,7 +237,7 @@ def test_warm_start():
     X, y = load_breast_cancer(return_X_y=True)
 
     clf_l2_lbfgsb = ConstrainedLogisticRegression(
-        solver="L-BFGS-B", penalty="l2", warm_start=True
+        solver="lbfgs", penalty="l2", warm_start=True
     )
     clf_l2_ecos = ConstrainedLogisticRegression(
         solver="ecos", penalty="l2", warm_start=True
@@ -256,7 +256,7 @@ def test_class_weight():
     X, y = load_breast_cancer(return_X_y=True)
 
     clf_l2_lbfgsb = ConstrainedLogisticRegression(
-        solver="L-BFGS-B", penalty="l2", class_weight="balanced"
+        solver="lbfgs", penalty="l2", class_weight="balanced"
     )
     clf_l2_ecos = ConstrainedLogisticRegression(
         solver="ecos", penalty="l2", class_weight={0: 1, 1: 5}
@@ -291,7 +291,7 @@ def test_close_to_unconstrained():
     w = rng.uniform(-0.4, 0.4, X.shape[1])
 
     lr = LogisticRegression()
-    clf = ConstrainedLogisticRegression(solver="L-BFGS-B")
+    clf = ConstrainedLogisticRegression(solver="lbfgs")
     unbounded_intercept = Bounds([0] * (X.shape[1]) + [-np.inf])
 
     y = rng.binomial(1, expit(X @ w))

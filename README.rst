@@ -39,10 +39,10 @@ To install from source, download or clone the git repository
 Dependencies
 ------------
 
-* cvxpy>=1.0.31
-* numpy
-* scikit-learn>=0.20.0
-* scipy
+* cvxpy>=1.4.0
+* numpy>=1.26.4
+* scikit-learn>=1.5.0
+* scipy>=1.12.0
 
 
 Examples
@@ -53,23 +53,23 @@ clogistic can flawlessly replace the scikit-learn LogisticRegression import when
 .. code-block:: python
    
    # from sklearn.linear_models import LogisticRegression
-   from clogistic import LogisticRegression
+   from clogistic import ConstrainedLogisticRegression as LogisticRegression
 
 
 L1-norm / Elastic-Net
 ---------------------
 
-In the unconstrained problem, the L-BFGS-B solver supports both L1 and Elastic-Net regularization.
+In the unconstrained problem, the lbfgs solver supports both L1 and Elastic-Net regularization.
 
 .. code-block:: python
 
-   >>> from clogistic import LogisticRegression
+   >>> from clogistic import LogisticRegression as LogisticRegression
    >>> from sklearn.datasets import load_breast_cancer
    >>> X, y = load_breast_cancer(return_X_y=True)
-   >>> clf = LogisticRegression(solver="L-BFGS-B", penalty="l1")
+   >>> clf = LogisticRegression(solver="lbfgs", penalty="l1")
    >>> clf.fit(X, y)
    LogisticRegression(C=1.0, class_weight=None, fit_intercept=True, l1_ratio=None,
-                      max_iter=100, penalty='l1', solver='L-BFGS-B', tol=0.0001,
+                      max_iter=100, penalty='l1', solver='lbfgs', tol=0.0001,
                       verbose=False, warm_start=False)
    >>> clf.predict(X[:5, :])
    array([0, 0, 0, 1, 0])
@@ -93,10 +93,10 @@ In the unconstrained problem, the L-BFGS-B solver supports both L1 and Elastic-N
 
 .. code-block:: python
 
-   >>> clf = LogisticRegression(solver="L-BFGS-B", penalty="elasticnet", l1_ratio=0.5)
+   >>> clf = LogisticRegression(solver="lbfgs", penalty="elasticnet", l1_ratio=0.5)
    >>> clf.fit(X, y)
    LogisticRegression(C=1.0, class_weight=None, fit_intercept=True, l1_ratio=0.5,
-                      max_iter=100, penalty='elasticnet', solver='L-BFGS-B',
+                      max_iter=100, penalty='elasticnet', solver='lbfgs',
                       tol=0.0001, verbose=False, warm_start=False)
    >>> clf.score(X, y)
    0.9402460456942003
@@ -145,10 +145,10 @@ If we choose ``penalty="l2"`` or ``penalty=None``, the L-BFGS-B solver can handl
 
 .. code-block:: python
 
-   >>> clf = LogisticRegression(solver="L-BFGS-B", penalty="l2")
+   >>> clf = LogisticRegression(solver="lbfgs", penalty="l2")
    >>> clf.fit(X, y, bounds=bounds)
    LogisticRegression(C=1.0, class_weight=None, fit_intercept=True, l1_ratio=None,
-                      max_iter=100, penalty='l2', solver='L-BFGS-B', tol=0.0001,
+                      max_iter=100, penalty='l2', solver='lbfgs', tol=0.0001,
                       verbose=False, warm_start=False)
    >>> clf.score(X, y, bounds=bounds)
    0.9507908611599297

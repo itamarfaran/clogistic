@@ -31,30 +31,28 @@ PenaltyType = Optional[Literal["l1", "l2", "elasticnet"]]
 
 
 def _check_solver(
-    solver: Literal["ecos", "scs", "L-BFGS-B"],
+    solver: Literal["ecos", "scs", "lbfgs"],
     penalty: PenaltyType,
     bounds: Optional[Bounds],
     constraints: Optional[LinearConstraint],
     warm_start: bool,
     l1_ratio: Optional[float],
 ) -> None:
-    if solver == "L-BFGS-B":
+    if solver == "lbfgs":
         if penalty in ("l1", "elasticnet") and bounds is not None:
             raise ValueError(
-                'Solver "L-BFGS-B" does not support bound '
+                'Solver "lbfgs" does not support bound '
                 'constraints with penalty "l1" and '
                 '"elasticnet"; choose either "ecos" or "scs" '
                 "solver."
             )
 
         if constraints is not None:
-            raise ValueError(
-                '"L-BFGS-B" solver does not  supports linear ' "constraints."
-            )
+            raise ValueError("'lbfgs' solver does not  supports linear constraints.")
 
         if penalty in ("l1", "elasticnet") and warm_start:
             raise ValueError(
-                'Solver "L-BFGS-B" does not support warm start '
+                'Solver "lbfgs" does not support warm start '
                 'with "l1" and "elasticnet" regularization.'
             )
 
@@ -385,17 +383,17 @@ class ConstrainedLogisticRegression(LogisticRegression):
     Constrained Logistic Regression (aka logit, MaxEnt) classifier.
 
     This class implements regularized logistic regression supported bound
-    and linear constraints using the 'ecos', 'scs' and 'L-BFGS-B' solvers.
+    and linear constraints using the 'ecos', 'scs' and 'lbfgs' solvers.
 
     All solvers support only L1, L2 and Elastic-Net regularization or no
-    regularization. The 'L-BFGS-B' solver supports bound constraints for L2
+    regularization. The 'lbfgs' solver supports bound constraints for L2
     regularization. The 'ecos' and 'scs' solver support bound constraints and
     linear constraints for all regularizations.
 
     Parameters
     ----------
     penalty : {'l1', 'l2', 'elasticnet', 'none'}, default='l2'
-        Used to specify the norm used in the penalization. The 'L-BFGS-B',
+        Used to specify the norm used in the penalization. The 'lbfgs',
         solver supports only 'l2' penalties if bounds are provided.
         If 'none', no regularization is applied.
 
@@ -422,11 +420,11 @@ class ConstrainedLogisticRegression(LogisticRegression):
         Note that these weights will be multiplied with sample_weight (passed
         through the fit method) if sample_weight is specified.
 
-    solver : {'ecos', 'L-BFGS-B', 'scs'}, default='ecos'
+    solver : {'ecos', 'lbfgs', 'scs'}, default='ecos'
         Algorithm/solver to use in the optimization problem.
 
-        - Unconstrained 'L-BFGS-B' handles all regularizations.
-        - Bound constrained 'L-BFGS-B' handles L2 or no penalty.
+        - Unconstrained 'lbfgs' handles all regularizations.
+        - Bound constrained 'lbfgs' handles L2 or no penalty.
         - For other cases, use 'ecos' or 'scs'.
 
         Note that 'ecos' and 'scs' are general-purpose solvers called via
@@ -464,7 +462,7 @@ class ConstrainedLogisticRegression(LogisticRegression):
     References
     ----------
 
-    L-BFGS-B -- Software for Large-scale Bound-constrained Optimization
+    lbfgs -- Software for Large-scale Bound-constrained Optimization
         Ciyou Zhu, Richard Byrd, Jorge Nocedal and Jose Luis Morales.
         http://users.iems.northwestern.edu/~nocedal/L-BFGS-Bb.html
     """
@@ -475,7 +473,7 @@ class ConstrainedLogisticRegression(LogisticRegression):
         "C": [Interval(numbers.Real, 0, None, closed="right")],
         "fit_intercept": ["boolean"],
         "class_weight": [dict, StrOptions({"balanced"}), None],
-        "solver": [StrOptions({"ecos", "L-BFGS-B", "scs"})],
+        "solver": [StrOptions({"ecos", "lbfgs", "scs"})],
         "max_iter": [Interval(numbers.Integral, 0, None, closed="left")],
         "verbose": ["verbose"],
         "warm_start": ["boolean"],
@@ -490,7 +488,7 @@ class ConstrainedLogisticRegression(LogisticRegression):
         C: float = 1.0,
         fit_intercept: bool = True,
         class_weight: Optional[Union[dict[Any, float], Literal["balanced"]]] = None,
-        solver: Literal["ecos", "scs", "L-BFGS-B"] = "ecos",
+        solver: Literal["ecos", "scs", "lbfgs"] = "ecos",
         max_iter: int = 100,
         verbose: Union[int, bool] = 0,
         warm_start: bool = False,
