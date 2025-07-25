@@ -12,6 +12,7 @@ Implementation based on scikit-learn Logistic Regression.
 
 import numbers
 import warnings
+from typing import Any, Literal, Optional, Union
 
 import cvxpy as cp
 import numpy as np
@@ -26,7 +27,17 @@ from sklearn.utils.validation import _check_sample_weight, check_is_fitted
 from sklearn.utils._param_validation import StrOptions, Interval
 
 
-def _check_solver(solver, penalty, bounds, constraints, warm_start, l1_ratio):
+PenaltyType = Optional[Literal["l1", "l2", "elasticnet"]]
+
+
+def _check_solver(
+    solver: Literal["ecos", "scs", "L-BFGS-B"],
+    penalty: PenaltyType,
+    bounds: Optional[Bounds],
+    constraints: Optional[LinearConstraint],
+    warm_start: bool,
+    l1_ratio: Optional[float],
+) -> None:
     if solver == "L-BFGS-B":
         if penalty in ("l1", "elasticnet") and bounds is not None:
             raise ValueError(
@@ -59,7 +70,7 @@ def _check_solver(solver, penalty, bounds, constraints, warm_start, l1_ratio):
         )
 
 
-def _check_bounds(bounds, n, fit_intercept):
+def _check_bounds(bounds: Bounds, n: int, fit_intercept: bool) -> None:
     if not isinstance(bounds, Bounds):
         raise TypeError("bounds is not of type scipy.optimize.Bounds.")
 
@@ -74,7 +85,9 @@ def _check_bounds(bounds, n, fit_intercept):
         )
 
 
-def _check_constraints(constraints, n, fit_intercept):
+def _check_constraints(
+    constraints: LinearConstraint, n: int, fit_intercept: bool
+) -> None:
     if not isinstance(constraints, LinearConstraint):
         raise TypeError(
             "constraints is not of type " "scipy.optimize.LinearConstraint."
@@ -95,12 +108,20 @@ def _check_constraints(constraints, n, fit_intercept):
 
 
 def _logistic_l1_loss_and_grad(
-    w2, X, y, alpha, penalty, fit_intercept, l1_ratio, sample_weight
-):
+    w2: np.ndarray,
+    X: np.ndarray,
+    y: np.ndarray,
+    alpha: float,
+    penalty: PenaltyType,
+    fit_intercept: bool,
+    l1_ratio: Optional[float],
+    sample_weight: Optional[np.ndarray],
+) -> tuple[float, np.ndarray]:
 
     n_samples, n_features = X.shape
 
     grad = np.empty_like(w2)
+    reg = 0.0
     reg_grad = np.zeros(w2.size)
 
     c = 0.0
@@ -146,7 +167,15 @@ def _logistic_l1_loss_and_grad(
     return out, grad
 
 
-def _logistic_loss_and_grad(w, X, y, alpha, penalty, fit_intercept, sample_weight):
+def _logistic_loss_and_grad(
+    w: np.ndarray,
+    X: np.ndarray,
+    y: np.ndarray,
+    alpha: float,
+    penalty: PenaltyType,
+    fit_intercept: bool,
+    sample_weight: Optional[np.ndarray],
+) -> tuple[float, np.ndarray]:
 
     n_samples, n_features = X.shape
     grad = np.empty_like(w)
@@ -179,19 +208,19 @@ def _logistic_loss_and_grad(w, X, y, alpha, penalty, fit_intercept, sample_weigh
 
 
 def _fit_lbfgsb(
-    penalty,
-    tol,
-    C,
-    fit_intercept,
-    max_iter,
-    l1_ratio,
-    warm_start_coef,
-    verbose,
-    X,
-    y,
-    sample_weight,
-    bounds=None,
-):
+    penalty: PenaltyType,
+    tol: float,
+    C: float,
+    fit_intercept: bool,
+    max_iter: int,
+    l1_ratio: Optional[float],
+    warm_start_coef: Optional[np.ndarray],
+    verbose: bool,
+    X: np.ndarray,
+    y: np.ndarray,
+    sample_weight: Optional[np.ndarray],
+    bounds: Optional[Bounds] = None,
+) -> tuple[np.ndarray, float]:
 
     m, n = X.shape
 
@@ -215,7 +244,13 @@ def _fit_lbfgsb(
     options = {"disp": verbose, "gtol": tol, "maxiter": max_iter}
 
     res = minimize(
-        func, w0.flatten(), method="L-BFGS-B", jac=True, bounds=bounds, args=args, options=options
+        func,
+        w0.flatten(),
+        method="L-BFGS-B",
+        jac=True,
+        bounds=bounds,
+        args=args,
+        options=options,
     )
 
     if fit_intercept:
@@ -235,21 +270,21 @@ def _fit_lbfgsb(
 
 
 def _fit_cvxpy(
-    solver,
-    penalty,
-    tol,
-    C,
-    fit_intercept,
-    max_iter,
-    l1_ratio,
-    warm_start_coef,
-    verbose,
-    X,
-    y,
-    sample_weight,
-    bounds=None,
-    constraints=None,
-):
+    solver: Literal["ecos", "scs"],
+    penalty: PenaltyType,
+    tol: float,
+    C: float,
+    fit_intercept: bool,
+    max_iter: int,
+    l1_ratio: Optional[float],
+    warm_start_coef: Optional[np.ndarray],
+    verbose: bool,
+    X: np.ndarray,
+    y: np.ndarray,
+    sample_weight: Optional[np.ndarray],
+    bounds: Optional[Bounds] = None,
+    constraints: Optional[LinearConstraint] = None,
+) -> tuple[np.ndarray, float]:
 
     m, n = X.shape
 
@@ -325,9 +360,14 @@ def _fit_cvxpy(
         solve_options = {"solver": cp.ECOS, "abstol": tol}
     elif solver == "scs":
         solve_options = {"solver": cp.SCS, "eps": tol}
+    else:
+        raise ValueError("Unknown solver {}".format(solver))
 
     problem.solve(
-        max_iters=max_iter, verbose=bool(verbose), warm_start=warm_start, **solve_options
+        max_iters=max_iter,
+        verbose=bool(verbose),
+        warm_start=warm_start,
+        **solve_options,
     )
 
     if fit_intercept:
@@ -444,17 +484,17 @@ class ConstrainedLogisticRegression(LogisticRegression):
 
     def __init__(
         self,
-        penalty="l2",
+        penalty: PenaltyType = "l2",
         *,
-        tol=1e-4,
-        C=1.0,
-        fit_intercept=True,
-        class_weight=None,
-        solver="ecos",
-        max_iter=100,
-        verbose=0,
-        warm_start=False,
-        l1_ratio=None,
+        tol: float = 1e-4,
+        C: float = 1.0,
+        fit_intercept: bool = True,
+        class_weight: Optional[Union[dict[Any, float], Literal["balanced"]]] = None,
+        solver: Literal["ecos", "scs", "L-BFGS-B"] = "ecos",
+        max_iter: int = 100,
+        verbose: Union[int, bool] = 0,
+        warm_start: bool = False,
+        l1_ratio: Optional[float] = None,
         **kwargs,
     ):
         super().__init__(
@@ -471,7 +511,14 @@ class ConstrainedLogisticRegression(LogisticRegression):
             **kwargs,
         )
 
-    def fit(self, X, y, sample_weight=None, bounds=None, constraints=None):
+    def fit(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        sample_weight: Optional[np.ndarray] = None,
+        bounds: Optional[Bounds] = None,
+        constraints: Optional[LinearConstraint] = None,
+    ) -> "ConstrainedLogisticRegression":
         """
         Fit the model according to the given training data.
 
@@ -501,7 +548,14 @@ class ConstrainedLogisticRegression(LogisticRegression):
         """
         self._validate_params()
 
-        _check_solver(self.solver, self.penalty, bounds, constraints, self.warm_start, self.l1_ratio)
+        _check_solver(
+            solver=self.solver,
+            penalty=self.penalty,
+            bounds=bounds,
+            constraints=constraints,
+            warm_start=self.warm_start,
+            l1_ratio=self.l1_ratio,
+        )
 
         X, y = self._validate_data(X, y, accept_sparse="csr", order="C")
 
@@ -545,35 +599,35 @@ class ConstrainedLogisticRegression(LogisticRegression):
 
         if self.solver in ("ecos", "scs"):
             coef_, intercept_ = _fit_cvxpy(
-                self.solver,
-                self.penalty,
-                self.tol,
-                self.C,
-                self.fit_intercept,
-                self.max_iter,
-                self.l1_ratio,
-                warm_start_coef,
-                self.verbose,
-                X,
-                y,
-                sample_weight,
-                bounds,
-                constraints,
+                solver=self.solver,
+                penalty=self.penalty,
+                tol=self.tol,
+                C=self.C,
+                fit_intercept=self.fit_intercept,
+                max_iter=self.max_iter,
+                l1_ratio=self.l1_ratio,
+                warm_start_coef=warm_start_coef,
+                verbose=self.verbose,
+                X=X,
+                y=y,
+                sample_weight=sample_weight,
+                bounds=bounds,
+                constraints=constraints,
             )
         else:
             coef_, intercept_ = _fit_lbfgsb(
-                self.penalty,
-                self.tol,
-                self.C,
-                self.fit_intercept,
-                self.max_iter,
-                self.l1_ratio,
-                warm_start_coef,
-                self.verbose,
-                X,
-                y,
-                sample_weight,
-                bounds,
+                penalty=self.penalty,
+                tol=self.tol,
+                C=self.C,
+                fit_intercept=self.fit_intercept,
+                max_iter=self.max_iter,
+                l1_ratio=self.l1_ratio,
+                warm_start_coef=warm_start_coef,
+                verbose=self.verbose,
+                X=X,
+                y=y,
+                sample_weight=sample_weight,
+                bounds=bounds,
             )
 
         self.coef_ = np.asarray([coef_])
