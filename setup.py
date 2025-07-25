@@ -26,7 +26,7 @@ install_requires = [
 
 # Read version file
 version_info = {}
-with open("clogistic/_version.py") as f:
+with open("clogistic/__version__.py") as f:
     exec(f.read(), version_info)
 
 
