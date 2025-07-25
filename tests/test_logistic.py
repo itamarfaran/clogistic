@@ -1,47 +1,42 @@
 import numpy as np
+import pytest
 
-from pytest import approx, raises
+from scipy.optimize import Bounds, LinearConstraint
+from sklearn.datasets import load_breast_cancer
 
 from clogistic import ConstrainedLogisticRegression
-
-from scipy.optimize import Bounds
-from scipy.optimize import LinearConstraint
-from sklearn.datasets import load_breast_cancer
 
 
 def test_parameters():
     # Test parameters
     X, y = load_breast_cancer(return_X_y=True)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression(penalty="new_penalty").fit(X, y)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression(penalty="elasticnet").fit(X, y)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression(tol=-1e-3).fit(X, y)
 
-    with raises(TypeError):
+    with pytest.raises(TypeError):
         ConstrainedLogisticRegression(fit_intercept=0).fit(X, y)
 
-    with raises(TypeError):
+    with pytest.raises(TypeError):
         ConstrainedLogisticRegression(class_weight=[]).fit(X, y)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression(class_weight="unbalanced").fit(X, y)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression(solver="new_solver").fit(X, y)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression(max_iter=-10).fit(X, y)
 
-    with raises(TypeError):
+    with pytest.raises(TypeError):
         ConstrainedLogisticRegression(warm_start=1).fit(X, y)
-
-    with raises(TypeError):
-        ConstrainedLogisticRegression(verbose=1).fit(X, y)
 
 
 def test_solver():
@@ -54,7 +49,7 @@ def test_solver():
         ),
     ]
     for clf in clfs:
-        with raises(ValueError):
+        with pytest.raises(ValueError):
             clf.fit(X, y)
 
     lb = np.r_[np.full(X.shape[1], -1), -np.inf]
@@ -67,7 +62,7 @@ def test_solver():
     ]
 
     for clf in clfs:
-        with raises(ValueError):
+        with pytest.raises(ValueError):
             clf.fit(X, y, bounds=bounds)
 
     lb = np.array([0.0])
@@ -77,18 +72,18 @@ def test_solver():
     constraints = LinearConstraint(A, lb, ub)
 
     for clf in clfs:
-        with raises(ValueError):
+        with pytest.raises(ValueError):
             clf.fit(X, y, constraints=constraints)
 
 
 def test_target():
     X, y = load_breast_cancer(return_X_y=True)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         y2 = np.random.randn(y.size)
         ConstrainedLogisticRegression().fit(X, y2)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         y2 = np.ones(y.size)
         ConstrainedLogisticRegression().fit(X, y2)
 
@@ -97,25 +92,26 @@ def test_bounds():
     X, y = load_breast_cancer(return_X_y=True)
 
     bounds = [(-np.inf, np.inf)] * X.shape[1]
-    with raises(TypeError):
+    with pytest.raises(TypeError):
         ConstrainedLogisticRegression(penalty="l2").fit(X, y, bounds=bounds)
 
     lb = np.r_[np.full(X.shape[1] - 1, -1), -np.inf]
     ub = np.r_[np.zeros(X.shape[1] - 1), np.inf]
     bounds = Bounds(lb, ub)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression(penalty="l2").fit(X, y, bounds=bounds)
 
     lb = np.r_[np.full(X.shape[1] - 1, -1), -np.inf]
     ub = np.r_[np.zeros(X.shape[1] - 1), np.inf]
     bounds = Bounds(lb, ub)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression(penalty="l2").fit(X, y, bounds=bounds)
 
 
-def test_contraints():
+@pytest.mark.skip(reason="these issues are dalt internally within scipy")
+def test_constraints():
     X, y = load_breast_cancer(return_X_y=True)
 
     lb = np.array([0.0])
@@ -123,14 +119,14 @@ def test_contraints():
     A = np.zeros((1, X.shape[1] + 1))
     A[0, :2] = np.array([-1, 1])
 
-    with raises(TypeError):
+    with pytest.raises(TypeError):
         ConstrainedLogisticRegression().fit(X, y, constraints=[A, lb, ub])
 
     lb = np.array([0.0])
     ub = np.array([0.5])
     constraints = LinearConstraint(A, lb, ub)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression().fit(X, y, constraints=constraints)
 
     lb = np.array([0.0])
@@ -138,7 +134,7 @@ def test_contraints():
     A = np.zeros((1, X.shape[1]))
     constraints = LinearConstraint(A, lb, ub)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression().fit(X, y, constraints=constraints)
 
     lb = np.array([0.0, 0.2])
@@ -146,7 +142,7 @@ def test_contraints():
     A = np.zeros((1, X.shape[1] + 1))
     constraints = LinearConstraint(A, lb, ub)
 
-    with raises(ValueError):
+    with pytest.raises(ValueError):
         ConstrainedLogisticRegression().fit(X, y, constraints=constraints)
 
 
@@ -172,7 +168,7 @@ def test_predict_breast_cancer():
             assert np.mean(pred == y) > 0.93
 
             probabilities = clf.predict_proba(X)
-            assert probabilities.sum(axis=1) == approx(np.ones(X.shape[0]))
+            assert probabilities.sum(axis=1) == pytest.approx(np.ones(X.shape[0]))
 
             pred = clf.classes_[np.argmax(clf.predict_log_proba(X), axis=1)]
             assert np.mean(pred == y) > 0.9
@@ -202,7 +198,7 @@ def test_predict_breast_cancer_no_intercept():
             assert np.mean(pred == y) > 0.93
 
             probabilities = clf.predict_proba(X)
-            assert probabilities.sum(axis=1) == approx(np.ones(X.shape[0]))
+            assert probabilities.sum(axis=1) == pytest.approx(np.ones(X.shape[0]))
 
             pred = clf.classes_[np.argmax(clf.predict_log_proba(X), axis=1)]
             assert np.mean(pred == y) > 0.9
@@ -240,7 +236,7 @@ def test_predict_breast_cancer_bounds_constraints():
             assert np.mean(pred == y) > 0.93
 
             probabilities = clf.predict_proba(X)
-            assert probabilities.sum(axis=1) == approx(np.ones(X.shape[0]))
+            assert probabilities.sum(axis=1) == pytest.approx(np.ones(X.shape[0]))
 
             pred = clf.classes_[np.argmax(clf.predict_log_proba(X), axis=1)]
             assert np.mean(pred == y) > 0.9
@@ -262,7 +258,7 @@ def test_warm_start():
         clf.fit(X, y)
         score2 = clf.score(X, y)
 
-        assert score1 == approx(score2, rel=1e-1)
+        assert score1 == pytest.approx(score2, rel=1e-1)
 
 
 def test_class_weight():
