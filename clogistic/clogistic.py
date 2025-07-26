@@ -264,10 +264,7 @@ def _fit_lbfgsb(
 
     m, n = X.shape
 
-    mask = y == 1
-    y_bin = np.ones(y.shape, dtype=X.dtype)
-    y_bin[~mask] = -1.0
-
+    y_bin = np.where(y == 1, 1.0, -1.0).astype(X.dtype)
     if penalty in ("l1", "elasticnet"):
         func = _logistic_l1_loss_and_grad
         w0 = np.zeros(2 * n + int(fit_intercept))
