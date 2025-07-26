@@ -16,8 +16,10 @@ from typing import Any, Literal, Optional, Union
 
 import cvxpy as cp
 import numpy as np
+import numpy.typing as npt
 from scipy.optimize import Bounds, LinearConstraint, minimize
 from scipy.special import expit
+from sklearn.base import BaseEstimator
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_consistent_length, compute_class_weight
@@ -41,6 +43,32 @@ except ImportError:
             return wrapper
 
         return decorator
+
+
+try:
+    from sklearn.utils.validation import validate_data
+
+except ImportError:
+    # sklearn.utils.validation.validate_data introduced
+    # in sklearn 1.6.0, clogistic supports sklearn>=1.2.0:
+    # this block is to support sklearn>=1.2.0,<1.6.0
+
+    def validate_data(
+        _estimator: BaseEstimator,
+        X: Union[npt.ArrayLike, Literal["no_validation"]] = "no_validation",
+        y: Union[npt.ArrayLike, Literal["no_validation"]] = "no_validation",
+        reset: bool = True,
+        validate_separately: Union[Literal[False], dict[str, Any]] = False,
+        skip_check_array: bool = False,
+        **check_params: Any,
+    ) -> Union[np.ndarray, tuple[np.ndarray, np.ndarray]]:
+        return _estimator._validate_data(
+            X=X,
+            y=y,
+            reset=reset,
+            validate_separately=validate_separately,
+            **check_params,
+        )
 
 
 PenaltyType = Optional[Literal["l1", "l2", "elasticnet"]]
@@ -524,9 +552,9 @@ class ConstrainedLogisticRegression(LogisticRegression):
     @_fit_context(prefer_skip_nested_validation=True)
     def fit(
         self,
-        X: np.ndarray,
-        y: np.ndarray,
-        sample_weight: Optional[np.ndarray] = None,
+        X: npt.ArrayLike,
+        y: npt.ArrayLike,
+        sample_weight: Optional[npt.ArrayLike] = None,
         bounds: Optional[Bounds] = None,
         constraints: Optional[LinearConstraint] = None,
     ) -> "ConstrainedLogisticRegression":
@@ -568,7 +596,7 @@ class ConstrainedLogisticRegression(LogisticRegression):
             l1_ratio=self.l1_ratio,
         )
 
-        X, y = self._validate_data(X, y, accept_sparse="csr", order="C")
+        X, y = validate_data(self, X, y, accept_sparse="csr", order="C")
 
         if type_of_target(y) != "binary":
             raise ValueError("This solver needs a binary target.")
