@@ -115,21 +115,30 @@ def test_bounds_and_constraints(fake_data):
 
 
 @pytest.mark.parametrize(
-    "solver, penalty, fit_intercept",
+    "solver, penalty, fit_intercept, dataframe",
     itertools.product(
         ("lbfgs", "ecos", "scs"),
         (None, "l1", "l2", "elasticnet"),
         (True, False),
+        (True, False),
     ),
 )
-def test_predict_breast_cancer(breast_cancer_data, solver, penalty, fit_intercept):
-    X, y = breast_cancer_data
+def test_predict_breast_cancer(
+    breast_cancer_data,
+    breast_cancer_dataframe,
+    solver,
+    penalty,
+    fit_intercept,
+    dataframe,
+):
+    X, y = breast_cancer_dataframe if dataframe else breast_cancer_data
 
     # Test constrained logistic regression with the breast cancer dataset
     # Test that all solvers with all regularizations score (>0.93) for the training data
     clf = ConstrainedLogisticRegression(solver=solver, penalty=penalty, l1_ratio=0.5)
     clf.fit(X, y)
     assert_predictions(clf, X, y)
+    assert hasattr(clf, "feature_names_in_") is dataframe
 
 
 @pytest.mark.parametrize(

@@ -1,7 +1,11 @@
+# minimal requirements:
 cvxpy==1.4.0
 numpy==1.26.4
 scikit-learn==1.2.0
 scipy==1.12.0
+
+# required for development / testing:
 black==25.1.0
 coverage==7.10.0
+pandas==1.5.3
 pytest==8.4.1
