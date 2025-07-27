@@ -7,7 +7,6 @@ from scipy.special import expit
 from sklearn.linear_model import LogisticRegression
 
 from clogistic import ConstrainedLogisticRegression
-from tests.conftest import fake_data
 
 
 def bounds_and_constraints(
